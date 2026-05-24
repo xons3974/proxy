@@ -30,7 +30,7 @@ profile:
 ntp:
   enable: true
   write-to-system: true
-  server: time.apple.com
+  server: ntp.ntsc.ac.cn
   port: 123
   interval: 60
 
@@ -41,16 +41,17 @@ bind-address: "*"
 
 tun:
   include-uid: []
-  enable: true
+  enable: false
   device: mihoyo
   stack: mixed
   auto-route: true
   strict-route: true
   endpoint-independent-nat: true
-  auto-redirect: true 
+  auto-redirect: true
   auto-detect-interface: true
   dns-hijack: 
-    - any:53
+    - tcp://any:53
+    - udp://any:53
 
 dns:
   enable: true
@@ -73,7 +74,7 @@ dns:
     - https://dns.alidns.com/dns-query
     - https://doh.pub/dns-query
   nameserver:
-    - https://xxxxxxxxxx.cloudflare-gateway.com/dns-query
+    - https://cloudflare-dns.com/dns-query
     - https://dns.google/dns-query
   proxy-server-nameserver:
     - https://dns.alidns.com/dns-query
@@ -82,6 +83,8 @@ dns:
     "RULE-SET:CN_域":
       - https://dot.pub/dns-query
       - https://dns.alidns.com/dns-query
+
+proxies:
 
 p: &p
   type: http
@@ -99,25 +102,24 @@ p: &p
   override:
     udp: true
 
-
 proxy-providers:
-  proxy1:
+  订阅名:
     <<: *p
-    path: ./proxy_provider/proxy1.yaml
-    url: ""
+    path: ./proxy_provider/订阅名.yaml
+    url: "订阅"
 
 proxy-groups:
   - name: Proxy
-    icon: "https://v6.gh-proxy.org/https://github.com/xons3974/proxy/blob/main/icon/proxy.png"
+    icon: "https://v6.gh-proxy.org/https://github.com/xons3974/proxy/blob/main/icon/svg/proxy.svg"
     type: select
     proxies:
-      - proxy1
+      - 订阅名
 
   - name: AI
-    icon: "https://v6.gh-proxy.org/https://github.com/xons3974/proxy/blob/main/icon/ai.png"
+    icon: "https://v6.gh-proxy.org/https://github.com/xons3974/proxy/blob/main/icon/svg/ai.svg"
     type: select
     proxies:
-      - Proxy
+      - 订阅名
 
 rule-anchor:
   IPCIDR: &IPCIDR
@@ -130,7 +132,7 @@ rule-providers:
   WebRTC_端/域:
     <<: *Domain
     path: ./rules/WebRTC.mrs
-    url: "https://v6.gh-proxy.org/https://github.com/musiyun124/mihomo-rules/raw/refs/heads/rules/WebRTC.mrs"
+    url: "https://v6.gh-proxy.org/https://github.com/musiyun124/mihomo/raw/refs/heads/main/rules/WebRTC.mrs"
 
   Fake-IP-Filter:
     <<: *Domain
@@ -150,6 +152,10 @@ rule-providers:
     <<: *Domain
     path: ./rules/No-ads-all.mrs
     url: "https://v6.gh-proxy.org/https://github.com/TG-Twilight/AWAvenue-Ads-Rule/raw/refs/heads/main/Filters/AWAvenue-Ads-Rule-Clash.mrs"
+  Adblock:
+    <<: *Domain
+    path: ./rules/Adblock.mrs
+    url: "https://v6.gh-proxy.org/https://raw.githubusercontent.com/217heidai/adblockfilters/main/rules/adblockmihomo.mrs"
 
   Google_域:
     <<: *Domain
@@ -181,9 +187,8 @@ rule-providers:
 rules:
   - RULE-SET,WebRTC_端/域,REJECT
   - RULE-SET,No-ads-all_域,REJECT
+  - RULE-SET,Adblock,REJECT
   - DOMAIN-KEYWORD,v6.gh-proxy,DIRECT
-  - DOMAIN,time.is,DIRECT
-  - DOMAIN-SUFFIX,pool.ntp.org,DIRECT
   - RULE-SET,Private_域,DIRECT
   - RULE-SET,Private_IP,DIRECT,no-resolve
   - AND,((NETWORK,udp),(DST-PORT,443)),REJECT
