@@ -199,7 +199,7 @@ if %errorlevel% equ 0 (
     set "MSG=提示: 已成功关闭开机自启。"
 ) else (
     call :WriteVBS
-    reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Run" /v "MihomoCore" /t REG_SZ /d "\"%VBS_FILE%\"" /f >nul 2>&1
+    reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Run" /v "MihomoCore" /t REG_SZ /d "wscript.exe \"%VBS_FILE%\"" /f >nul 2>&1
     set "MSG=提示: 已成功开启开机自启。"
 )
 goto MenuLoop
@@ -213,7 +213,7 @@ if not errorlevel 1 ( set "CURRENT_MODE=PROXY" ) else ( set "CURRENT_MODE=TUN" )
 exit /b
 
 :InitTUI
-set "TUI_FILE=%TEMP%\mihomo_tui_v24.ps1"
+set "TUI_FILE=%TEMP%\mihomo_tui_v25.ps1"
 if exist "%TUI_FILE%" exit /b
 
 > "%TUI_FILE%" echo param($s, $v, $o1, $o2, $o3, $o4, $o5, $o6, $o7, $o8, $m, $lsel)
@@ -234,7 +234,7 @@ if exist "%TUI_FILE%" exit /b
 >>"%TUI_FILE%" echo   Write-Host "    系统状态: " -NoNewline; if($s -match '未运行'){Write-Host $s"            " -ForegroundColor Red}else{Write-Host $s"            " -ForegroundColor Green}
 >>"%TUI_FILE%" echo   Write-Host "    开机自启: " -NoNewline; if($v -match '未开启'){Write-Host $v"            " -ForegroundColor DarkGray}else{Write-Host $v"            " -ForegroundColor Green}
 >>"%TUI_FILE%" echo   Write-Host "                                                                                "
->>"%TUI_FILE%" echo   Write-Host "    [ Tab / 方向键 切换选项 | Enter 确认执行 | ESC 退出 ]                     " -ForegroundColor DarkGray
+>>"%TUI_FILE%" echo   Write-Host "    [ WASD / 方向键 / Tab 切换 | Enter / Space 确认 | ESC 退出 ]              " -ForegroundColor DarkGray
 >>"%TUI_FILE%" echo   Write-Host "                                                                                "
 >>"%TUI_FILE%" echo   Write-Host "  ┌────────────────┬────────────────┬────────────────┬────────────────┐       " -ForegroundColor DarkCyan
 >>"%TUI_FILE%" echo   Write-Host "  │                │                │                │                │       " -ForegroundColor DarkCyan
@@ -261,11 +261,11 @@ if exist "%TUI_FILE%" exit /b
 >>"%TUI_FILE%" echo   $k = $host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
 >>"%TUI_FILE%" echo   if($k.KeyDown){
 >>"%TUI_FILE%" echo     $vk = $k.VirtualKeyCode
->>"%TUI_FILE%" echo     if($vk -eq 9 -or $vk -eq 39){ $sel = $sel + 1; if($sel -ge $max){$sel=0} }
->>"%TUI_FILE%" echo     elseif($vk -eq 37){ $sel = $sel - 1; if($sel -lt 0){$sel=$max-1} }
->>"%TUI_FILE%" echo     elseif($vk -eq 40){ $sel = $sel + $cols; if($sel -ge $max){$sel=$sel-$max} }
->>"%TUI_FILE%" echo     elseif($vk -eq 38){ $sel = $sel - $cols; if($sel -lt 0){$sel=$sel+$max} }
->>"%TUI_FILE%" echo     elseif($vk -eq 13){
+>>"%TUI_FILE%" echo     if($vk -eq 9 -or $vk -eq 39 -or $vk -eq 68){ $sel = $sel + 1; if($sel -ge $max){$sel=0} }
+>>"%TUI_FILE%" echo     elseif($vk -eq 37 -or $vk -eq 65){ $sel = $sel - 1; if($sel -lt 0){$sel=$max-1} }
+>>"%TUI_FILE%" echo     elseif($vk -eq 40 -or $vk -eq 83){ $sel = $sel + $cols; if($sel -ge $max){$sel=$sel-$max} }
+>>"%TUI_FILE%" echo     elseif($vk -eq 38 -or $vk -eq 87){ $sel = $sel - $cols; if($sel -lt 0){$sel=$sel+$max} }
+>>"%TUI_FILE%" echo     elseif($vk -eq 13 -or $vk -eq 32){
 >>"%TUI_FILE%" echo       if($opts[$sel] -notmatch "当前|未运行"){
 >>"%TUI_FILE%" echo         if($sel -eq 4){
 >>"%TUI_FILE%" echo           Start-Process 'config.yaml' -ErrorAction SilentlyContinue
@@ -293,11 +293,44 @@ if exist "%TUI_FILE%" exit /b
 exit /b
 
 :WriteVBS
-> "%VBS_FILE%" echo Dim ws, q
+> "%VBS_FILE%" echo Dim ws, fso, f, line, cleanLine, inTun, tunEnabled
 >>"%VBS_FILE%" echo Set ws = CreateObject("WScript.Shell")
->>"%VBS_FILE%" echo q = Chr(34)
+>>"%VBS_FILE%" echo Set fso = CreateObject("Scripting.FileSystemObject")
 >>"%VBS_FILE%" echo ws.CurrentDirectory = "%~dp0"
->>"%VBS_FILE%" echo ws.Run "cmd /c " ^& q ^& "%~dp0%MIHOMO_EXE%" ^& q ^& " -d . > " ^& q ^& "%LOG_OUT%" ^& q ^& " 2>&1", 0, False
+>>"%VBS_FILE%" echo inTun = False
+>>"%VBS_FILE%" echo tunEnabled = False
+>>"%VBS_FILE%" echo If fso.FileExists("%~dp0%CONFIG_FILE%") Then
+>>"%VBS_FILE%" echo     Set f = fso.OpenTextFile("%~dp0%CONFIG_FILE%", 1)
+>>"%VBS_FILE%" echo     Do Until f.AtEndOfStream
+>>"%VBS_FILE%" echo         line = f.ReadLine
+>>"%VBS_FILE%" echo         cleanLine = line
+>>"%VBS_FILE%" echo         If InStr(cleanLine, "#") ^> 0 Then cleanLine = Left(cleanLine, InStr(cleanLine, "#") - 1)
+>>"%VBS_FILE%" echo         If Trim(cleanLine) ^<^> "" Then
+>>"%VBS_FILE%" echo             If Left(cleanLine, 1) ^<^> " " And Left(cleanLine, 1) ^<^> Chr(9) Then
+>>"%VBS_FILE%" echo                 If Left(cleanLine, 4) = "tun:" Then
+>>"%VBS_FILE%" echo                     inTun = True
+>>"%VBS_FILE%" echo                 Else
+>>"%VBS_FILE%" echo                     inTun = False
+>>"%VBS_FILE%" echo                 End If
+>>"%VBS_FILE%" echo             End If
+>>"%VBS_FILE%" echo             If inTun And InStr(cleanLine, "enable:") ^> 0 And InStr(cleanLine, "true") ^> 0 Then
+>>"%VBS_FILE%" echo                 tunEnabled = True
+>>"%VBS_FILE%" echo                 Exit Do
+>>"%VBS_FILE%" echo             End If
+>>"%VBS_FILE%" echo         End If
+>>"%VBS_FILE%" echo     Loop
+>>"%VBS_FILE%" echo     f.Close
+>>"%VBS_FILE%" echo End If
+>>"%VBS_FILE%" echo If Not tunEnabled Then
+>>"%VBS_FILE%" echo     ws.RegWrite "HKCU\Software\Microsoft\Windows\CurrentVersion\Internet Settings\ProxyServer", "%PROXY_SERVER%", "REG_SZ"
+>>"%VBS_FILE%" echo     ws.RegWrite "HKCU\Software\Microsoft\Windows\CurrentVersion\Internet Settings\ProxyOverride", "%PROXY_BYPASS%", "REG_SZ"
+>>"%VBS_FILE%" echo     ws.RegWrite "HKCU\Software\Microsoft\Windows\CurrentVersion\Internet Settings\ProxyEnable", 1, "REG_DWORD"
+>>"%VBS_FILE%" echo Else
+>>"%VBS_FILE%" echo     ws.RegWrite "HKCU\Software\Microsoft\Windows\CurrentVersion\Internet Settings\ProxyEnable", 0, "REG_DWORD"
+>>"%VBS_FILE%" echo End If
+>>"%VBS_FILE%" echo ws.Run "powershell -NoProfile -WindowStyle Hidden -Command ""$q=[char]34; $t='[DllImport('+$q+'wininet.dll'+$q+')] public static extern bool InternetSetOption(int h, int o, int p, int d);'; $w=Add-Type -MemberDefinition $t -Name W -PassThru; $w::InternetSetOption(0,39,0,0) | Out-Null; $w::InternetSetOption(0,37,0,0) | Out-Null""", 0, True
+>>"%VBS_FILE%" echo Dim q: q = Chr(34)
+>>"%VBS_FILE%" echo ws.Run "cmd /c " ^& q ^& q ^& "%~dp0%MIHOMO_EXE%" ^& q ^& " -d . > " ^& q ^& "%LOG_OUT%" ^& q ^& " 2>&1" ^& q, 0, False
 exit /b
 
 :KillMihomo
