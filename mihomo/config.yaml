@@ -42,7 +42,7 @@ bind-address: "*"
 tun:
   include-uid: []
   enable: true
-  device: mihoyo
+  device: meta
   stack: mixed
   auto-route: true
   strict-route: true
@@ -52,6 +52,7 @@ tun:
   dns-hijack: 
     - tcp://any:53
     - udp://any:53
+  mtu: 1500
 
 dns:
   enable: true
@@ -62,7 +63,7 @@ dns:
   enhanced-mode: fake-ip
   fake-ip-filter-mode: rule
   fake-ip-range: 198.18.0.1/16
-  fake-ip-range6: fdfe:dcba:9876::1/64
+  fake-ip-range6: fc00::/18
   fake-ip-filter:
     - RULE-SET,CN_域,real-ip
     - RULE-SET,Fake-IP-Filter,real-ip
@@ -101,25 +102,23 @@ p: &p
     udp: true
 
 proxy-providers:
-  订阅源:
+  订阅:
     <<: *p
     path: ./proxy_provider/订阅.yaml
-    url: "订阅"
+    url: ""
 
 proxy-groups:
   - name: Proxy
     icon: "https://v6.gh-proxy.org/https://github.com/xons3974/proxy/blob/main/icon/svg/proxy.svg"
     type: select
     proxies:
-      - DIRECT
-    use:
-      - 订阅源
+      - 订阅
 
   - name: AI
     icon: "https://v6.gh-proxy.org/https://github.com/xons3974/proxy/blob/main/icon/svg/ai.svg"
     type: select
-    use:
-      - 订阅源
+    proxies:
+      - 订阅
 
 rule-anchor:
   IPCIDR: &IPCIDR
